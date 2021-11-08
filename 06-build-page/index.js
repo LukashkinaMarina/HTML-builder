@@ -1,15 +1,16 @@
 const fs = require('fs');
 const path = require('path');
-const styles = path.join(__dirname, 'styles');
-const fonts = path.join('assets', 'fonts');
-const img = path.join('assets', 'img');
-const svg = path.join('assets', 'svg');
-const dist = path.join(__dirname, 'project-dist');
 const template = path.join(__dirname, 'template.html');
 const indexFile = path.join(__dirname, 'project-dist', 'index.html');
 const header = path.join(__dirname, 'components', 'header.html');
 const articles = path.join(__dirname, 'components', 'articles.html');
 const footer = path.join(__dirname, 'components', 'footer.html');
+const styles = path.join(__dirname, 'styles');
+const dist = path.join(__dirname, 'project-dist');
+const assets = path.join(__dirname, 'assets');
+const fonts = path.join(assets, 'fonts');
+const img = path.join(assets, 'img');
+const svg = path.join(assets, 'svg');
 
 function createFolder(folder, cb) {
   fs.access(folder, fs.F_OK, (err) => {
@@ -43,28 +44,22 @@ function replaceToken(file, snippetFile, token, cb) {
   });
 }
 
-function copyDir(folder) {
-  fs.readdir(
-    path.join(__dirname, folder),
-    { withFileTypes: true },
-    (err, files) => {
-      files.forEach((file) => {
-        if (file.isFile()) {
-          fs.stat(path.join(__dirname, folder, file.name), (err, stats) => {
-            if (err) {
-              console.log(file, `File doesn't exist.`);
-            } else {
-              fs.createReadStream(path.join(__dirname, folder, file.name)).pipe(
-                fs.createWriteStream(
-                  path.join(__dirname, 'project-dist', folder, file.name)
-                )
-              );
-            }
-          });
-        }
-      });
-    }
-  );
+function copyDir(folder, newFolder) {
+  fs.readdir(folder, { withFileTypes: true }, (err, files) => {
+    files.forEach((file) => {
+      if (file.isFile()) {
+        fs.stat(path.join(folder, file.name), (e) => {
+          if (e) {
+            console.warn(file, `File doesn't exist.`);
+          } else {
+            fs.createReadStream(path.join(folder, file.name)).pipe(
+              fs.createWriteStream(path.join(newFolder, file.name))
+            );
+          }
+        });
+      }
+    });
+  });
 }
 
 function mergeFilesToOneNew(stylesPath, newPath, extType) {
@@ -112,15 +107,15 @@ createFolder(dist, () => {
       replaceToken(indexFile, footer, /{{footer}}/g);
     });
   });
-  createFolder(path.join(dist, 'assets'), () => {
-    createFolder(path.join(dist, img), () => {
-      copyDir(img);
+  createFolder(assets, () => {
+    createFolder(path.join(dist, 'img'), () => {
+      copyDir(img, path.join(dist, 'img'));
     });
-    createFolder(path.join(dist, svg), () => {
-      copyDir(svg);
+    createFolder(path.join(dist, 'svg'), () => {
+      copyDir(svg, path.join(dist, 'svg'));
     });
-    createFolder(path.join(dist, fonts), () => {
-      copyDir(fonts);
+    createFolder(path.join(dist, 'fonts'), () => {
+      copyDir(fonts, path.join(dist, 'fonts'));
     });
   });
 });
