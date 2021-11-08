@@ -4,14 +4,25 @@ const styles = path.join(__dirname, 'styles');
 const dist = path.join(__dirname, 'project-dist');
 const bundle = path.join(dist, 'bundle.css');
 
-function createFolder(folder, cb) {
+function removeFiles(folder) {
+  fs.readdir(folder, { withFileTypes: true }, (err, files) => {
+    files.forEach((file) => {
+      fs.unlink(path.join(folder, file.name), () => {
+        //do nothing
+      });
+    });
+  });
+}
+
+function createFolder(folder, callback) {
   fs.access(folder, fs.F_OK, (err) => {
     if (err) {
       fs.mkdir(folder, () => {
-        cb && cb();
+        callback && callback();
       });
     }
-    cb && cb();
+    removeFiles(folder);
+    callback && callback();
   });
 }
 
@@ -35,7 +46,7 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
       filtered.sort().forEach((file, index) => {
         fs.stat(path.join(stylesPath, file.name), (e) => {
           if (e) {
-            console.log(file, `File doesn't exist.`);
+            console.warn(file, `File doesn't exist.`);
           } else {
             streamToString(
               fs.createReadStream(
@@ -54,7 +65,7 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
       });
     });
     promise.then((updated) => {
-      fs.writeFile(newPath, updated.join('\n\r'), (e1) => {
+      fs.writeFile(newPath, updated.join('\n\r'), 'utf8', (e1) => {
         if (e1) throw e1;
       });
     });

@@ -1,36 +1,47 @@
-const fs = require("fs");
-const path = require("path");
-const pathFile = path.join(__dirname, "files-copy");
-const { stdout } = process;
-const testFolder = path.join(__dirname, "files");
-//process.on("exit", () => {
+const fs = require('fs');
+const path = require('path');
+const original = path.join(__dirname, 'files');
+const copy = path.join(__dirname, 'files-copy');
 
-fs.access(pathFile, fs.F_OK, (err) => {
-  if (err) {
-    fs.mkdir(path.join(pathFile), (err) => {
-      if (err) throw err;
-      console.log("Папка была создана");
+function removeFiles(folder) {
+  fs.readdir(folder, { withFileTypes: true }, (err, files) => {
+    files.forEach((file) => {
+      fs.unlink(path.join(folder, file.name), () => {
+        //do nothing
+      });
     });
-  }
-});
+  });
+}
 
-fs.readdir(testFolder, { withFileTypes: true }, (err, files) => {
-  files.forEach((file) => {
-    if (file.isFile()) {
-      fs.stat(`${testFolder}\\${file.name}`, (err, stats) => {
-        if (err) {
-          console.log(file, `File doesn't exist.`);
-        } else {
-          fs.createReadStream(
-            path.join(__dirname, `/files/${path.basename(file.name)}`)
-          ).pipe(
-            fs.createWriteStream(
-              path.join(__dirname, `/files-copy/${path.basename(file.name)}`)
-            )
-          );
-        }
+function createFolder(folder, callback) {
+  fs.access(folder, fs.F_OK, (err) => {
+    if (err) {
+      fs.mkdir(folder, () => {
+        callback && callback();
       });
     }
+    removeFiles(folder);
+    callback && callback();
   });
+}
+
+function copyDir(folder, newFolder) {
+  fs.readdir(folder, { withFileTypes: true }, (err, files) => {
+    files.forEach((file) => {
+      if (file.isFile()) {
+        fs.stat(path.join(folder, file.name), (e) => {
+          if (e) {
+            console.warn(file, `File doesn't exist.`);
+          } else {
+            fs.createReadStream(path.join(folder, file.name)).pipe(
+              fs.createWriteStream(path.join(newFolder, file.name))
+            );
+          }
+        });
+      }
+    });
+  });
+}
+createFolder(copy, () => {
+  copyDir(original, copy);
 });
-//});

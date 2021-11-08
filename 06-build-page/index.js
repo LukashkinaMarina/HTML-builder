@@ -12,14 +12,25 @@ const fonts = path.join(assets, 'fonts');
 const img = path.join(assets, 'img');
 const svg = path.join(assets, 'svg');
 
-function createFolder(folder, cb) {
+function removeFiles(folder) {
+  fs.readdir(folder, { withFileTypes: true }, (err, files) => {
+    files.forEach((file) => {
+      fs.unlink(path.join(folder, file.name), () => {
+        //do nothing
+      });
+    });
+  });
+}
+
+function createFolder(folder, callback) {
   fs.access(folder, fs.F_OK, (err) => {
     if (err) {
       fs.mkdir(folder, () => {
-        cb && cb();
+        callback && callback();
       });
     }
-    cb && cb();
+    removeFiles(folder);
+    callback && callback();
   });
 }
 
@@ -32,13 +43,13 @@ function streamToString(stream) {
   });
 }
 
-function replaceToken(file, snippetFile, token, cb) {
+function replaceToken(file, snippetFile, token, callback) {
   fs.readFile(file, 'utf8', function (err, data) {
     streamToString(fs.createReadStream(snippetFile)).then((result) => {
       let formatted = data.replace(token, result);
       fs.writeFile(file, formatted, 'utf8', function (e) {
         if (e) return console.error(e);
-        cb && cb();
+        callback && callback();
       });
     });
   });
@@ -92,7 +103,7 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
       });
     });
     promise.then((updated) => {
-      fs.writeFile(newPath, updated.join('\n\r'), (e1) => {
+      fs.writeFile(newPath, updated.join('\n\r'), 'utf8', (e1) => {
         if (e1) throw e1;
       });
     });
