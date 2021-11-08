@@ -101,21 +101,25 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
 
 createFolder(dist, () => {
   mergeFilesToOneNew(styles, path.join(dist, 'style.css'), 'css');
-  fs.createReadStream(template).pipe(fs.createWriteStream(indexFile));
-  replaceToken(indexFile, header, /{{header}}/g, () => {
-    replaceToken(indexFile, articles, /{{articles}}/g, () => {
-      replaceToken(indexFile, footer, /{{footer}}/g);
+  streamToString(fs.createReadStream(template)).then((result) => {
+    fs.writeFile(indexFile, result, () => {
+      replaceToken(indexFile, header, /{{header}}/g, () => {
+        replaceToken(indexFile, articles, /{{articles}}/g, () => {
+          replaceToken(indexFile, footer, /{{footer}}/g);
+        });
+      });
     });
   });
-  createFolder(assets, () => {
-    createFolder(path.join(dist, 'img'), () => {
-      copyDir(img, path.join(dist, 'img'));
+
+  createFolder(path.join(dist, 'assets'), () => {
+    createFolder(path.join(dist, 'assets', 'img'), () => {
+      copyDir(img, path.join(dist, 'assets', 'img'));
     });
-    createFolder(path.join(dist, 'svg'), () => {
-      copyDir(svg, path.join(dist, 'svg'));
+    createFolder(path.join(dist, 'assets', 'svg'), () => {
+      copyDir(svg, path.join(dist, 'assets', 'svg'));
     });
-    createFolder(path.join(dist, 'fonts'), () => {
-      copyDir(fonts, path.join(dist, 'fonts'));
+    createFolder(path.join(dist, 'assets', 'fonts'), () => {
+      copyDir(fonts, path.join(dist, 'assets', 'fonts'));
     });
   });
 });
