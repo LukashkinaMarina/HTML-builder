@@ -4,24 +4,26 @@ const styles = path.join(__dirname, 'styles');
 const dist = path.join(__dirname, 'project-dist');
 const bundle = path.join(dist, 'bundle.css');
 
-function removeFiles(folder) {
+function removeFiles(folder, excludes) {
   fs.readdir(folder, { withFileTypes: true }, (err, files) => {
     files.forEach((file) => {
-      fs.unlink(path.join(folder, file.name), () => {
-        //do nothing
-      });
+      if (!excludes || (excludes && !excludes.includes(file.name))) {
+        fs.unlink(path.join(folder, file.name), () => {
+          //do nothing
+        });
+      }
     });
   });
 }
 
-function createFolder(folder, callback) {
+function createFolder(folder, excludes, callback) {
   fs.access(folder, fs.F_OK, (err) => {
     if (err) {
       fs.mkdir(folder, () => {
         callback && callback();
       });
     } else {
-      removeFiles(folder);
+      removeFiles(folder, excludes);
       callback && callback();
     }
   });
@@ -68,6 +70,6 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
   });
 }
 
-createFolder(dist, () => {
+createFolder(dist, ['index.html'], () => {
   mergeFilesToOneNew(styles, bundle, 'css');
 });

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const template = path.join(__dirname, 'template.html');
 const indexFile = path.join(__dirname, 'project-dist', 'index.html');
+const components = path.join(__dirname, 'components');
 const header = path.join(__dirname, 'components', 'header.html');
 const articles = path.join(__dirname, 'components', 'articles.html');
 const footer = path.join(__dirname, 'components', 'footer.html');
@@ -100,14 +101,33 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
   });
 }
 
+function replaceTokens(file, tokens) {
+  if (!tokens || !tokens.length) return;
+  const { path, regexp } = tokens.shift();
+  replaceToken(file, path, regexp, () => {
+    replaceTokens(file, tokens);
+  });
+}
+
 createFolder(dist, () => {
   mergeFilesToOneNew(styles, path.join(dist, 'style.css'), 'css');
   readFileAsString(template).then((result) => {
-    fs.writeFile(indexFile, result, () => {
-      replaceToken(indexFile, header, /{{header}}/g, () => {
-        replaceToken(indexFile, articles, /{{articles}}/g, () => {
-          replaceToken(indexFile, footer, /{{footer}}/g);
-        });
+    let tokens = [];
+    fs.readdir(components, { withFileTypes: true }, (err, files) => {
+      tokens = files.map((file) => {
+        return {
+          path: path.join(components, file.name),
+          regexp: new RegExp(
+            `{{${path
+              .basename(file.name)
+              .replace(path.extname(file.name), '')}}}`,
+            'g'
+          ),
+        };
+      });
+
+      fs.writeFile(indexFile, result, () => {
+        replaceTokens(indexFile, tokens);
       });
     });
   });

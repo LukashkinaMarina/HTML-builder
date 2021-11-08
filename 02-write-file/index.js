@@ -4,6 +4,9 @@ const fileName = 'new.txt';
 const { stdin, stdout } = process;
 const file = path.join(__dirname, fileName);
 const farewell = 'Buy!';
+
+updateFile(file);
+
 stdout.write('Enter text:\n');
 
 function exit() {
@@ -13,9 +16,7 @@ function exit() {
 
 function checkExit(data) {
   if (data.toString().trim() === 'exit') {
-    updateFile(file, () => {
-      exit();
-    });
+    exit();
   }
 }
 
@@ -42,7 +43,5 @@ stdin.on('data', (data) => {
 });
 
 process.on('SIGINT', function () {
-  updateFile(file, () => {
-    exit();
-  });
+  exit();
 });
