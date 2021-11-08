@@ -1,35 +1,48 @@
-const fs = require("fs");
-const path = require("path");
-const fileName = "new.txt";
-const { exit } = require("process");
+const fs = require('fs');
+const path = require('path');
+const fileName = 'new.txt';
 const { stdin, stdout } = process;
 const file = path.join(__dirname, fileName);
-let fileExists = false;
-stdout.write("enter text\n");
+const farewell = 'Buy!';
+stdout.write('Enter text:\n');
 
-stdin.on("data", (data) => {
-  fs.access(file, fs.F_OK, (err) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    fileExists = true;
-    if (data !== "exit") {
-      fs.appendFile(file, data, (err) => {
-        if (err) throw err;
-      });
-    } else {
-      process.stdin.resume();
-    }
-  });
-  if (!fileExists) {
-    fs.writeFile(file, data, (err) => {
-      if (err) throw err;
+function exit() {
+  stdout.write(farewell);
+  process.exit();
+}
+
+function checkExit(data) {
+  if (data.toString().trim() === 'exit') {
+    updateFile(file, () => {
+      exit();
     });
   }
+}
+
+function updateFile(f, callback) {
+  fs.access(f, fs.F_OK, (err) => {
+    if (err) {
+      fs.writeFile(f, '', (e1) => {
+        if (e1) throw e1;
+        callback && callback();
+      });
+    } else {
+      callback && callback();
+    }
+  });
+}
+
+stdin.on('data', (data) => {
+  updateFile(file, () => {
+    checkExit(data);
+    fs.appendFile(file, data, (e) => {
+      if (e) throw e;
+    });
+  });
 });
 
-process.on("SIGINT", function () {
-  stdout.write("Buy!");
-  process.exit();
+process.on('SIGINT', function () {
+  updateFile(file, () => {
+    exit();
+  });
 });

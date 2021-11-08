@@ -19,9 +19,10 @@ function createFolder(folder, callback) {
       fs.mkdir(folder, () => {
         callback && callback();
       });
+    } else {
+      removeFiles(folder);
+      callback && callback();
     }
-    removeFiles(folder);
-    callback && callback();
   });
 }
 
@@ -29,19 +30,14 @@ function copyDir(folder, newFolder) {
   fs.readdir(folder, { withFileTypes: true }, (err, files) => {
     files.forEach((file) => {
       if (file.isFile()) {
-        fs.stat(path.join(folder, file.name), (e) => {
-          if (e) {
-            console.warn(file, `File doesn't exist.`);
-          } else {
-            fs.createReadStream(path.join(folder, file.name)).pipe(
-              fs.createWriteStream(path.join(newFolder, file.name))
-            );
-          }
-        });
+        fs.createReadStream(path.join(folder, file.name)).pipe(
+          fs.createWriteStream(path.join(newFolder, file.name))
+        );
       }
     });
   });
 }
+
 createFolder(copy, () => {
   copyDir(original, copy);
 });

@@ -20,18 +20,22 @@ function createFolder(folder, callback) {
       fs.mkdir(folder, () => {
         callback && callback();
       });
+    } else {
+      removeFiles(folder);
+      callback && callback();
     }
-    removeFiles(folder);
-    callback && callback();
   });
 }
 
-function streamToString(stream) {
+function readFileAsString(f) {
+  const stream = fs.createReadStream(f);
   const chunks = [];
   return new Promise((resolve, reject) => {
-    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('data', (chunk) => chunks.push(chunk));
     stream.on('error', (err) => reject(err));
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    stream.on('end', () =>
+      resolve(chunks.map((chunk) => chunk.toString('utf8')).join(''))
+    );
   });
 }
 
@@ -44,24 +48,16 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
         (file) => file.isFile() && path.extname(file.name) === `.${extType}`
       );
       filtered.sort().forEach((file, index) => {
-        fs.stat(path.join(stylesPath, file.name), (e) => {
-          if (e) {
-            console.warn(file, `File doesn't exist.`);
-          } else {
-            streamToString(
-              fs.createReadStream(
-                path.join(stylesPath, path.basename(file.name))
-              )
-            ).then((result) => {
-              count++;
+        readFileAsString(path.join(stylesPath, path.basename(file.name))).then(
+          (result) => {
+            count++;
 
-              updated[index] = result;
-              if (count === filtered.length) {
-                resolve(updated);
-              }
-            });
+            updated[index] = result;
+            if (count === filtered.length) {
+              resolve(updated);
+            }
           }
-        });
+        );
       });
     });
     promise.then((updated) => {

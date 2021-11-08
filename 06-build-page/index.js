@@ -28,24 +28,28 @@ function createFolder(folder, callback) {
       fs.mkdir(folder, () => {
         callback && callback();
       });
+    } else {
+      removeFiles(folder);
+      callback && callback();
     }
-    removeFiles(folder);
-    callback && callback();
   });
 }
 
-function streamToString(stream) {
+function readFileAsString(f) {
+  const stream = fs.createReadStream(f);
   const chunks = [];
   return new Promise((resolve, reject) => {
-    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('data', (chunk) => chunks.push(chunk));
     stream.on('error', (err) => reject(err));
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    stream.on('end', () =>
+      resolve(chunks.map((chunk) => chunk.toString('utf8')).join(''))
+    );
   });
 }
 
 function replaceToken(file, snippetFile, token, callback) {
   fs.readFile(file, 'utf8', function (err, data) {
-    streamToString(fs.createReadStream(snippetFile)).then((result) => {
+    readFileAsString(snippetFile).then((result) => {
       let formatted = data.replace(token, result);
       fs.writeFile(file, formatted, 'utf8', function (e) {
         if (e) return console.error(e);
@@ -59,15 +63,9 @@ function copyDir(folder, newFolder) {
   fs.readdir(folder, { withFileTypes: true }, (err, files) => {
     files.forEach((file) => {
       if (file.isFile()) {
-        fs.stat(path.join(folder, file.name), (e) => {
-          if (e) {
-            console.warn(file, `File doesn't exist.`);
-          } else {
-            fs.createReadStream(path.join(folder, file.name)).pipe(
-              fs.createWriteStream(path.join(newFolder, file.name))
-            );
-          }
-        });
+        fs.createReadStream(path.join(folder, file.name)).pipe(
+          fs.createWriteStream(path.join(newFolder, file.name))
+        );
       }
     });
   });
@@ -82,24 +80,16 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
         (file) => file.isFile() && path.extname(file.name) === `.${extType}`
       );
       filtered.sort().forEach((file, index) => {
-        fs.stat(path.join(stylesPath, file.name), (e) => {
-          if (e) {
-            console.log(file, `File doesn't exist.`);
-          } else {
-            streamToString(
-              fs.createReadStream(
-                path.join(stylesPath, path.basename(file.name))
-              )
-            ).then((result) => {
-              count++;
+        readFileAsString(path.join(stylesPath, path.basename(file.name))).then(
+          (result) => {
+            count++;
 
-              updated[index] = result;
-              if (count === filtered.length) {
-                resolve(updated);
-              }
-            });
+            updated[index] = result;
+            if (count === filtered.length) {
+              resolve(updated);
+            }
           }
-        });
+        );
       });
     });
     promise.then((updated) => {
@@ -112,7 +102,7 @@ function mergeFilesToOneNew(stylesPath, newPath, extType) {
 
 createFolder(dist, () => {
   mergeFilesToOneNew(styles, path.join(dist, 'style.css'), 'css');
-  streamToString(fs.createReadStream(template)).then((result) => {
+  readFileAsString(template).then((result) => {
     fs.writeFile(indexFile, result, () => {
       replaceToken(indexFile, header, /{{header}}/g, () => {
         replaceToken(indexFile, articles, /{{articles}}/g, () => {
