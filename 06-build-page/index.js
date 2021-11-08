@@ -117,12 +117,9 @@ createFolder(dist, () => {
       tokens = files.map((file) => {
         return {
           path: path.join(components, file.name),
-          regexp: new RegExp(
-            `{{${path
-              .basename(file.name)
-              .replace(path.extname(file.name), '')}}}`,
-            'g'
-          ),
+          regexp: `{{${path
+            .basename(file.name)
+            .replace(path.extname(file.name), '')}}}`,
         };
       });
 
