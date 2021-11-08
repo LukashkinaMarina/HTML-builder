@@ -43,7 +43,7 @@ function replaceToken(file, snippetFile, token, cb) {
   });
 }
 
-function copyFolder(folder) {
+function copyDir(folder) {
   fs.readdir(
     path.join(__dirname, folder),
     { withFileTypes: true },
@@ -67,10 +67,15 @@ function copyFolder(folder) {
   );
 }
 
-function mergeCSS(stylesPath, newPath) {
+function mergeFilesToOneNew(stylesPath, newPath, extType) {
   fs.readdir(stylesPath, { withFileTypes: true }, (err, files) => {
-    files.forEach((file) => {
-      if (file.isFile() && path.extname(file.name) === '.css') {
+    const promise = new Promise((resolve) => {
+      let count = 0;
+      let updated = [];
+      const filtered = files.filter(
+        (file) => file.isFile() && path.extname(file.name) === `.${extType}`
+      );
+      filtered.sort().forEach((file, index) => {
         fs.stat(path.join(stylesPath, file.name), (e) => {
           if (e) {
             console.log(file, `File doesn't exist.`);
@@ -80,19 +85,27 @@ function mergeCSS(stylesPath, newPath) {
                 path.join(stylesPath, path.basename(file.name))
               )
             ).then((result) => {
-              fs.appendFile(newPath, result, (e1) => {
-                if (e1) throw e1;
-              });
+              count++;
+
+              updated[index] = result;
+              if (count === filtered.length) {
+                resolve(updated);
+              }
             });
           }
         });
-      }
+      });
+    });
+    promise.then((updated) => {
+      fs.writeFile(newPath, updated.join('\n\r'), (e1) => {
+        if (e1) throw e1;
+      });
     });
   });
 }
 
 createFolder(dist, () => {
-  mergeCSS(styles, path.join(__dirname, 'project-dist/style.css'));
+  mergeFilesToOneNew(styles, path.join(dist, 'style.css'), 'css');
   fs.createReadStream(template).pipe(fs.createWriteStream(indexFile));
   replaceToken(indexFile, header, /{{header}}/g, () => {
     replaceToken(indexFile, articles, /{{articles}}/g, () => {
@@ -101,13 +114,13 @@ createFolder(dist, () => {
   });
   createFolder(path.join(dist, 'assets'), () => {
     createFolder(path.join(dist, img), () => {
-      copyFolder(img);
+      copyDir(img);
     });
     createFolder(path.join(dist, svg), () => {
-      copyFolder(svg);
+      copyDir(svg);
     });
     createFolder(path.join(dist, fonts), () => {
-      copyFolder(fonts);
+      copyDir(fonts);
     });
   });
 });
